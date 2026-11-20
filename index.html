@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Predictor de palabras</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<main>
+  <h1>Predictor de palabras</h1>
+  <p class="sub" id="info"></p>
+
+  <section>
+    <h2>Escribe aquí</h2>
+    <textarea id="texto" spellcheck="false" autofocus placeholder="Empieza una sentencia SQL, por ejemplo: SELECT"></textarea>
+    <div class="botones">
+      <button class="principal" id="generar">Generar sentencia</button>
+      <button id="limpiar">Limpiar</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Siguiente palabra más probable</h2>
+    <div id="sugerencias"></div>
+    <p class="ayuda">Pulsa <kbd>Tab</kbd> para aceptar la primera, o haz clic en cualquiera.</p>
+  </section>
+</main>
+
+<script src="corpus.js"></script>
+<script src="modelo.js"></script>
+<script>
+  const modelo = new ModeloNGramas(CORPUS);
+  const texto = document.getElementById("texto");
+  const lista = document.getElementById("sugerencias");
+  const escapar = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  let sugerencias = [];
+
+  function actualizar() {
+    sugerencias = modelo.sugerir(texto.value);
+    lista.innerHTML = sugerencias.map((s, i) => `
+      <button class="sugerencia" data-i="${i}">
+        <i style="width:${Math.max(s.prob * 100, 1)}%"></i>
+        <span>${escapar(s.palabra)}</span><span class="pct">${s.prob < 0.001 ? "<0.1" : (s.prob * 100).toFixed(s.prob < 0.1 ? 1 : 0)}%</span>
+      </button>`).join("") || '<p class="ayuda">Sin sugerencias: el documento no contiene nada parecido.</p>';
+  }
+
+  function aceptar(i) {
+    if (!sugerencias[i]) return;
+    texto.value = sugerencias[i].texto;
+    texto.focus();
+    actualizar();
+  }
+
+  texto.addEventListener("input", actualizar);
+  texto.addEventListener("keydown", e => {
+    if (e.key === "Tab" && !e.shiftKey && sugerencias.length) { e.preventDefault(); aceptar(0); }
+  });
+  lista.addEventListener("click", e => aceptar(e.target.closest(".sugerencia")?.dataset.i));
+  document.getElementById("generar").addEventListener("click", () => { texto.value = modelo.generar(texto.value); actualizar(); });
+  document.getElementById("limpiar").addEventListener("click", () => { texto.value = ""; texto.focus(); actualizar(); });
+  actualizar();
+</script>
+</body>
+</html>

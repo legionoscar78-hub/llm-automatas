@@ -1,0 +1,43 @@
+:root {
+  --fondo: #f6f7f9; --panel: #fff; --texto: #1c2330; --gris: #667085; --borde: #e3e6eb;
+  --acento: #2f5bea; --suave: #e8eefe; --verde: #1a7f4b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #0f1218; --panel: #171b23; --texto: #e6e9ef; --gris: #8b94a5; --borde: #272d38;
+    --acento: #7c9bff; --suave: #1f2a4a; --verde: #55c28a;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 system-ui, "Segoe UI", sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--gris); margin: 0 0 10px; }
+section { background: var(--panel); border: 1px solid var(--borde); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.sub, .ayuda { color: var(--gris); }
+.sub { margin: 0 0 16px; }
+.ayuda { font-size: 13px; margin: 10px 0 0; }
+
+textarea, .sugerencia { font: 14px/1.55 ui-monospace, Consolas, monospace; }
+textarea {
+  width: 100%; min-height: 160px; resize: vertical; padding: 12px;
+  background: var(--fondo); color: var(--texto); border: 1px solid var(--borde); border-radius: 8px;
+}
+textarea:focus { outline: 2px solid var(--acento); outline-offset: -1px; }
+
+button { font: inherit; color: var(--texto); background: var(--panel); border: 1px solid var(--borde);
+         border-radius: 8px; padding: 6px 14px; cursor: pointer; }
+button:hover { border-color: var(--acento); }
+.principal { background: var(--acento); border-color: var(--acento); color: #fff; }
+.botones { display: flex; gap: 10px; margin-top: 12px; }
+
+#sugerencias { display: flex; flex-direction: column; gap: 6px; }
+.sugerencia { position: relative; display: flex; justify-content: space-between; gap: 12px;
+              width: 100%; overflow: hidden; text-align: left; }
+.sugerencia:first-child { border-color: var(--acento); }
+.sugerencia i { position: absolute; inset: 0 auto 0 0; background: var(--suave); }   /* barra de probabilidad */
+.sugerencia span { position: relative; }
+.sugerencia .pct { color: var(--gris); font-size: 13px; }
+
+kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--borde); border-radius: 4px; padding: 0 5px; }
