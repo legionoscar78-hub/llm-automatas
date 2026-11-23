@@ -8,23 +8,37 @@
 </head>
 <body>
 <main>
-  <h1>Predictor de palabras</h1>
-  <p class="sub" id="info"></p>
-
-  <section>
-    <h2>Escribe aquí</h2>
-    <textarea id="texto" spellcheck="false" autofocus placeholder="Empieza una sentencia SQL, por ejemplo: SELECT"></textarea>
-    <div class="botones">
-      <button class="principal" id="generar">Generar sentencia</button>
-      <button id="limpiar">Limpiar</button>
+  <div class="ventana">
+    <div class="titulo">
+      <span class="punto"></span><span class="punto"></span><span class="punto"></span>
+      <span class="pestana">consulta.sql</span>
+      <span class="modelo">modelo de n-gramas · LLMFINETUNNING.txt</span>
     </div>
-  </section>
 
-  <section>
-    <h2>Siguiente palabra más probable</h2>
-    <div id="sugerencias"></div>
-    <p class="ayuda">Pulsa <kbd>Tab</kbd> para aceptar la primera, o haz clic en cualquiera.</p>
-  </section>
+    <div class="cuerpo">
+      <div class="numeros" id="numeros">1</div>
+      <div class="zona">
+        <div class="editor">
+          <div id="espejo" aria-hidden="true"></div>
+          <textarea id="texto" spellcheck="false" autofocus wrap="off" aria-label="Editor de SQL"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="acciones">
+      <select id="otras" aria-label="Otras recomendaciones"></select>
+      <div class="espacio">
+        <button class="principal" id="generar">Generar sentencia</button>
+        <button id="limpiar">Limpiar</button>
+      </div>
+    </div>
+
+    <div class="estado">
+      <span>SQL</span>
+      <span id="posicion">Ln 1, Col 1</span>
+      <span><kbd>Tab</kbd> aceptar sugerencia</span>
+    </div>
+  </div>
 </main>
 
 <script src="corpus.js"></script>
@@ -32,33 +46,63 @@
 <script>
   const modelo = new ModeloNGramas(CORPUS);
   const texto = document.getElementById("texto");
-  const lista = document.getElementById("sugerencias");
-  const escapar = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const espejo = document.getElementById("espejo");
+  const numeros = document.getElementById("numeros");
+  const otras = document.getElementById("otras");
+  const posicion = document.getElementById("posicion");
   let sugerencias = [];
 
+  function crear(etiqueta, clase, contenido) {
+    const el = document.createElement(etiqueta);
+    el.className = clase;
+    el.textContent = contenido;
+    return el;
+  }
+
   function actualizar() {
-    sugerencias = modelo.sugerir(texto.value);
-    lista.innerHTML = sugerencias.map((s, i) => `
-      <button class="sugerencia" data-i="${i}">
-        <i style="width:${Math.max(s.prob * 100, 1)}%"></i>
-        <span>${escapar(s.palabra)}</span><span class="pct">${s.prob < 0.001 ? "<0.1" : (s.prob * 100).toFixed(s.prob < 0.1 ? 1 : 0)}%</span>
-      </button>`).join("") || '<p class="ayuda">Sin sugerencias: el documento no contiene nada parecido.</p>';
+    const actual = texto.value;
+    sugerencias = modelo.sugerir(actual, 6);        // la mejor + 5 más
+
+    // La mejor sugerencia se muestra como texto "fantasma" justo después de lo escrito
+    let fantasma = "";
+    if (sugerencias[0]) {
+      const nuevo = sugerencias[0].texto.trimEnd();
+      fantasma = nuevo.toLowerCase().startsWith(actual.toLowerCase()) ? nuevo.slice(actual.length) : sugerencias[0].palabra;
+    }
+    const fin = crear("span", "", "​");
+    espejo.replaceChildren(crear("span", "", actual), crear("span", "fantasma", fantasma), fin);
+    if (texto.selectionStart === actual.length) fin.scrollIntoView({ block: "nearest", inline: "nearest" });   // seguir al cursor
+
+    // Las otras cinco, en el desplegable
+    otras.replaceChildren(new Option("Otras recomendaciones", ""), ...sugerencias.slice(1).map((s, i) => new Option(s.palabra, i + 1)));
+    otras.disabled = sugerencias.length < 2;
+
+    numeros.textContent = Array.from({ length: actual.split("\n").length }, (_, i) => i + 1).join("\n");
+  }
+
+  function actualizarPosicion() {
+    const lineas = texto.value.slice(0, texto.selectionStart).split("\n");
+    posicion.textContent = `Ln ${lineas.length}, Col ${lineas.at(-1).length + 1}`;
   }
 
   function aceptar(i) {
     if (!sugerencias[i]) return;
     texto.value = sugerencias[i].texto;
     texto.focus();
+    texto.setSelectionRange(texto.value.length, texto.value.length);
     actualizar();
+    actualizarPosicion();
   }
 
-  texto.addEventListener("input", actualizar);
+  texto.addEventListener("input", () => { actualizar(); actualizarPosicion(); });
+  texto.addEventListener("keyup", actualizarPosicion);
+  texto.addEventListener("click", actualizarPosicion);
   texto.addEventListener("keydown", e => {
     if (e.key === "Tab" && !e.shiftKey && sugerencias.length) { e.preventDefault(); aceptar(0); }
   });
-  lista.addEventListener("click", e => aceptar(e.target.closest(".sugerencia")?.dataset.i));
-  document.getElementById("generar").addEventListener("click", () => { texto.value = modelo.generar(texto.value); actualizar(); });
-  document.getElementById("limpiar").addEventListener("click", () => { texto.value = ""; texto.focus(); actualizar(); });
+  otras.addEventListener("change", () => { if (otras.value) aceptar(+otras.value); });
+  document.getElementById("generar").addEventListener("click", () => { texto.value = modelo.generar(texto.value); actualizar(); actualizarPosicion(); });
+  document.getElementById("limpiar").addEventListener("click", () => { texto.value = ""; texto.focus(); actualizar(); actualizarPosicion(); });
   actualizar();
 </script>
 </body>
